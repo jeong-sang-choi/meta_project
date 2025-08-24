@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MyMetaVerse - 테스트</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .container {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 30px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+        }
+        .section {
+            margin: 20px 0;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+        }
+        button {
+            background: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #45a049;
+        }
+        input, textarea {
+            width: 100%;
+            padding: 10px;
+            margin: 5px 0;
+            border: none;
+            border-radius: 5px;
+        }
+        .result {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+            white-space: pre-wrap;
+        }
+        .metaverse-preview {
+            width: 100%;
+            height: 400px;
+            background: linear-gradient(45deg, #f0f0f0, #e0e0e0);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #333;
+            font-size: 18px;
+            margin: 20px 0;
+        }
+        .color-palette {
+            display: flex;
+            gap: 10px;
+            margin: 10px 0;
+        }
+        .color-box {
+            width: 50px;
+            height: 50px;
+            border-radius: 5px;
+            border: 2px solid white;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🌟 MyMetaVerse 테스트</h1>
+        
+        <!-- 사용자 생성 섹션 -->
+        <div class="section">
+            <h2>👤 사용자 생성</h2>
+            <input type="text" id="username" placeholder="사용자명">
+            <input type="email" id="email" placeholder="이메일">
+            <input type="password" id="password" placeholder="비밀번호">
+            <button onclick="createUser()">사용자 생성</button>
+            <div id="userResult" class="result"></div>
+        </div>
+
+        <!-- 이미지 업로드 섹션 -->
+        <div class="section">
+            <h2>🖼️ 이미지 업로드 & 공간 생성</h2>
+            <input type="file" id="imageFile" accept="image/*">
+            <button onclick="uploadImage()">이미지 업로드</button>
+            <div id="imageResult" class="result"></div>
+        </div>
+
+        <!-- 메타버스 공간 미리보기 -->
+        <div class="section">
+            <h2>🏠 메타버스 공간 미리보기</h2>
+            <div class="metaverse-preview" id="metaversePreview">
+                이미지를 업로드하면 여기에 3D 공간이 생성됩니다!
+            </div>
+            <div id="spaceInfo" class="result"></div>
+        </div>
+
+        <!-- WebSocket 테스트 -->
+        <div class="section">
+            <h2>💬 실시간 채팅 테스트</h2>
+            <input type="number" id="userId" placeholder="사용자 ID" value="1">
+            <button onclick="connectWebSocket()">WebSocket 연결</button>
+            <button onclick="disconnectWebSocket()">연결 해제</button>
+            <div id="chatMessages" class="result" style="max-height: 200px; overflow-y: auto;"></div>
+            <input type="text" id="chatMessage" placeholder="메시지 입력">
+            <button onclick="sendMessage()">전송</button>
+        </div>
+
+        <!-- 캐릭터 움직임 테스트 -->
+        <div class="section">
+            <h2>🎮 캐릭터 움직임 테스트</h2>
+            <div style="display: flex; gap: 10px; margin: 10px 0;">
+                <button onclick="moveCharacter('forward')">⬆️ 앞으로</button>
+                <button onclick="moveCharacter('backward')">⬇️ 뒤로</button>
+                <button onclick="moveCharacter('left')">⬅️ 왼쪽</button>
+                <button onclick="moveCharacter('right')">➡️ 오른쪽</button>
+            </div>
+            <div style="display: flex; gap: 10px; margin: 10px 0;">
+                <button onclick="moveCharacter('jump')">🦘 점프</button>
+                <button onclick="moveCharacter('sit')">🪑 앉기</button>
+                <button onclick="moveCharacter('dance')">💃 춤추기</button>
+            </div>
+            <div id="characterPosition" class="result">캐릭터 위치: [0, 0, 0]</div>
+        </div>
+    </div>
+
+    <script>
+        let ws = null;
+        let currentSpaceData = null;
+
+        // 사용자 생성
+        async function createUser() {
+            const username = document.getElementById('username').value;
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+
+            try {
+                const response = await fetch('/users/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        username: username,
+                        email: email,
+                        password: password
+                    })
+                });
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    document.getElementById('userResult').textContent = `오류 (${response.status}): ${errorText}`;
+                    return;
+                }
+
+                const result = await response.json();
+                document.getElementById('userResult').textContent = JSON.stringify(result, null, 2);
+            } catch (error) {
+                document.getElementById('userResult').textContent = '오류: ' + error.message;
+            }
+        }
+
+        // 이미지 업로드
+        async function uploadImage() {
+            const fileInput = document.getElementById('imageFile');
+            const file = fileInput.files[0];
+
+            if (!file) {
+                alert('이미지를 선택해주세요!');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                console.log('이미지 업로드 시작...');
+                console.log('파일:', file);
+                
+                const response = await fetch('/upload-image/', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                console.log('응답 상태:', response.status);
+                console.log('응답 헤더:', response.headers);
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    console.error('서버 오류:', errorText);
+                    document.getElementById('imageResult').textContent = `오류 (${response.status}): ${errorText}`;
+                    return;
+                }
+
+                const result = await response.json();
+                console.log('받은 데이터:', result);
+                document.getElementById('imageResult').textContent = JSON.stringify(result, null, 2);
+                
+                // 메타버스 공간 미리보기 업데이트
+                // 서버 응답 구조: result.space_data.space_data
+                const spaceData = result.space_data && result.space_data.space_data ? result.space_data.space_data : result.space_data;
+                console.log('공간 데이터:', spaceData);
+                updateMetaversePreview(spaceData);
+            } catch (error) {
+                console.error('업로드 오류:', error);
+                document.getElementById('imageResult').textContent = '오류: ' + error.message;
+            }
+        }
+
+        // 메타버스 공간 미리보기 업데이트
+        function updateMetaversePreview(spaceData) {
+            const preview = document.getElementById('metaversePreview');
+            const spaceInfo = document.getElementById('spaceInfo');
+            
+            currentSpaceData = spaceData;
+
+            // 데이터 유효성 검사
+            if (!spaceData || !spaceData.walls || !spaceData.floor || !spaceData.lighting || !spaceData.furniture) {
+                preview.innerHTML = `
+                    <div style="text-align: center;">
+                        <h3>⚠️ 공간 데이터 오류</h3>
+                        <p>공간 데이터를 불러올 수 없습니다.</p>
+                        <p>받은 데이터: ${JSON.stringify(spaceData)}</p>
+                    </div>
+                `;
+                spaceInfo.textContent = JSON.stringify(spaceData, null, 2);
+                return;
+            }
+
+            // 간단한 3D 공간 시각화 (CSS로 구현)
+            const walls = spaceData.walls;
+            const floor = spaceData.floor;
+            const lighting = spaceData.lighting;
+            const furniture = spaceData.furniture;
+
+            preview.innerHTML = `
+                <div style="text-align: center;">
+                    <h3>🏠 생성된 메타버스 공간</h3>
+                    <div class="color-palette">
+                        <div class="color-box" style="background-color: ${walls.color || '#ffffff'}" title="벽 색상"></div>
+                        <div class="color-box" style="background-color: ${floor.color || '#8B4513'}" title="바닥 색상"></div>
+                    </div>
+                    <p>조명: ${lighting.type || 'bright'} (강도: ${lighting.intensity || 1.0})</p>
+                    <p>가구: ${furniture.length || 0}개</p>
+                    <p>스타일: ${spaceData.space_style || 'modern'}</p>
+                    <p>분위기: ${spaceData.mood || 'neutral'}</p>
+                </div>
+            `;
+
+            spaceInfo.textContent = JSON.stringify(spaceData, null, 2);
+        }
+
+        // WebSocket 연결
+        function connectWebSocket() {
+            const userId = document.getElementById('userId').value;
+            
+            ws = new WebSocket(`ws://localhost:8000/ws/${userId}`);
+            
+            ws.onopen = function(event) {
+                addChatMessage('시스템', 'WebSocket 연결됨!');
+            };
+            
+            ws.onmessage = function(event) {
+                const data = JSON.parse(event.data);
+                addChatMessage('서버', JSON.stringify(data));
+            };
+            
+            ws.onclose = function(event) {
+                addChatMessage('시스템', 'WebSocket 연결 해제됨');
+            };
+            
+            ws.onerror = function(error) {
+                addChatMessage('오류', 'WebSocket 오류: ' + error);
+            };
+        }
+
+        // WebSocket 연결 해제
+        function disconnectWebSocket() {
+            if (ws) {
+                ws.close();
+                ws = null;
+            }
+        }
+
+        // 메시지 전송
+        function sendMessage() {
+            if (!ws) {
+                alert('WebSocket에 연결되지 않았습니다!');
+                return;
+            }
+
+            const message = document.getElementById('chatMessage').value;
+            if (!message) return;
+
+            const data = {
+                type: 'chat',
+                space_id: 1,
+                message: message
+            };
+
+            ws.send(JSON.stringify(data));
+            addChatMessage('나', message);
+            document.getElementById('chatMessage').value = '';
+        }
+
+        // 채팅 메시지 추가
+        function addChatMessage(sender, message) {
+            const chatMessages = document.getElementById('chatMessages');
+            const timestamp = new Date().toLocaleTimeString();
+            chatMessages.textContent += `[${timestamp}] ${sender}: ${message}\n`;
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+                 // Enter 키로 메시지 전송
+         document.getElementById('chatMessage').addEventListener('keypress', function(e) {
+             if (e.key === 'Enter') {
+                 sendMessage();
+             }
+         });
+
+         // 캐릭터 움직임 관련 변수
+         let characterPosition = { x: 0, y: 0, z: 0 };
+         let characterAction = 'idle';
+
+         // 캐릭터 움직임 함수
+         function moveCharacter(direction) {
+             if (!ws) {
+                 alert('WebSocket에 연결되지 않았습니다! 먼저 WebSocket을 연결해주세요.');
+                 return;
+             }
+
+             // 위치 업데이트
+             switch (direction) {
+                 case 'forward':
+                     characterPosition.z -= 1;
+                     characterAction = 'walking';
+                     break;
+                 case 'backward':
+                     characterPosition.z += 1;
+                     characterAction = 'walking';
+                     break;
+                 case 'left':
+                     characterPosition.x -= 1;
+                     characterAction = 'walking';
+                     break;
+                 case 'right':
+                     characterPosition.x += 1;
+                     characterAction = 'walking';
+                     break;
+                 case 'jump':
+                     characterPosition.y += 1;
+                     characterAction = 'jumping';
+                     setTimeout(() => {
+                         characterPosition.y -= 1;
+                         characterAction = 'idle';
+                         updateCharacterPosition();
+                     }, 1000);
+                     break;
+                 case 'sit':
+                     characterAction = 'sitting';
+                     break;
+                 case 'dance':
+                     characterAction = 'dancing';
+                     setTimeout(() => {
+                         characterAction = 'idle';
+                         updateCharacterPosition();
+                     }, 3000);
+                     break;
+             }
+
+             // 위치 표시 업데이트
+             updateCharacterPosition();
+
+             // WebSocket으로 이동 메시지 전송
+             const moveData = {
+                 type: 'move',
+                 space_id: 1,
+                 position: characterPosition,
+                 action: characterAction
+             };
+
+             ws.send(JSON.stringify(moveData));
+             addChatMessage('시스템', `캐릭터 ${direction} 이동! 위치: [${characterPosition.x}, ${characterPosition.y}, ${characterPosition.z}]`);
+         }
+
+         // 캐릭터 위치 업데이트
+         function updateCharacterPosition() {
+             const positionDiv = document.getElementById('characterPosition');
+             const actionText = characterAction !== 'idle' ? ` (${characterAction})` : '';
+             positionDiv.textContent = `캐릭터 위치: [${characterPosition.x}, ${characterPosition.y}, ${characterPosition.z}]${actionText}`;
+         }
+
+         // 키보드로 캐릭터 조작
+         document.addEventListener('keydown', function(e) {
+             if (!ws) return; // WebSocket이 연결되지 않았으면 무시
+
+             switch (e.key) {
+                 case 'ArrowUp':
+                 case 'w':
+                 case 'W':
+                     e.preventDefault();
+                     moveCharacter('forward');
+                     break;
+                 case 'ArrowDown':
+                 case 's':
+                 case 'S':
+                     e.preventDefault();
+                     moveCharacter('backward');
+                     break;
+                 case 'ArrowLeft':
+                 case 'a':
+                 case 'A':
+                     e.preventDefault();
+                     moveCharacter('left');
+                     break;
+                 case 'ArrowRight':
+                 case 'd':
+                 case 'D':
+                     e.preventDefault();
+                     moveCharacter('right');
+                     break;
+                 case ' ':
+                     e.preventDefault();
+                     moveCharacter('jump');
+                     break;
+                 case 'Enter':
+                     e.preventDefault();
+                     moveCharacter('sit');
+                     break;
+             }
+         });
+    </script>
+</body>
+</html>

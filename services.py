@@ -25,16 +25,25 @@ class UserService:
         return pwd_context.verify(plain_password, hashed_password)
     
     async def create_user(self, user: UserCreate) -> User:
-        hashed_password = self.get_password_hash(user.password)
-        db_user = User(
-            username=user.username,
-            email=user.email,
-            hashed_password=hashed_password
-        )
-        self.db.add(db_user)
-        self.db.commit()
-        self.db.refresh(db_user)
-        return db_user
+        try:
+            # 기존 사용자 확인
+            existing_user = self.db.query(User).filter(User.email == user.email).first()
+            if existing_user:
+                raise ValueError(f"이미 존재하는 이메일입니다: {user.email}")
+            
+            hashed_password = self.get_password_hash(user.password)
+            db_user = User(
+                username=user.username,
+                email=user.email,
+                hashed_password=hashed_password
+            )
+            self.db.add(db_user)
+            self.db.commit()
+            self.db.refresh(db_user)
+            return db_user
+        except Exception as e:
+            self.db.rollback()
+            raise e
     
     async def get_user(self, user_id: int) -> Optional[User]:
         return self.db.query(User).filter(User.id == user_id).first()
